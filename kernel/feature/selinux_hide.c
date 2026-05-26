@@ -31,7 +31,7 @@
 
 static DEFINE_MUTEX(selinux_hide_mutex);
 static bool ksu_selinux_hide_enabled __read_mostly = false;
-static bool ksu_selinux_hide_running __read_mostly = false;
+bool ksu_selinux_hide_running __read_mostly = false;
 
 enum sel_inos {
     SEL_ROOT_INO = 2,
@@ -62,11 +62,11 @@ typedef ssize_t (*write_op_fn)(struct file *, char *, size_t);
 static write_op_fn *selinux_write_op;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
-static int security_context_to_sid_with_policy(struct selinux_policy *policy, const char *scontext, u32 scontext_len,
+int security_context_to_sid_with_policy(struct selinux_policy *policy, const char *scontext, u32 scontext_len,
                                                u32 *sid, u32 def_sid, gfp_t gfp_flags);
-static int security_sid_to_context_with_policy(struct selinux_policy *policy, u32 sid, char **scontext,
+int security_sid_to_context_with_policy(struct selinux_policy *policy, u32 sid, char **scontext,
                                                u32 *scontext_len);
-static void security_compute_av_user_with_policy(struct selinux_policy *policy, u32 ssid, u32 tsid, u16 tclass,
+void security_compute_av_user_with_policy(struct selinux_policy *policy, u32 ssid, u32 tsid, u16 tclass,
                                                  struct av_decision *avd);
 static void (*security_dump_masked_av_fn)(struct policydb *policydb, struct context *scontext, struct context *tcontext,
                                           u16 tclass, u32 permissions, const char *reason) = NULL;
@@ -605,7 +605,7 @@ out:
     return rc;
 }
 
-static int security_context_to_sid_with_policy(struct selinux_policy *policy, const char *scontext, u32 scontext_len,
+int security_context_to_sid_with_policy(struct selinux_policy *policy, const char *scontext, u32 scontext_len,
                                                u32 *sid, u32 def_sid, gfp_t gfp_flags)
 {
     struct policydb *policydb;
@@ -712,7 +712,7 @@ static int sidtab_entry_to_string(struct policydb *p, struct sidtab *sidtab, str
     return rc;
 }
 
-static int security_sid_to_context_with_policy(struct selinux_policy *policy, u32 sid, char **scontext,
+int security_sid_to_context_with_policy(struct selinux_policy *policy, u32 sid, char **scontext,
                                                u32 *scontext_len)
 {
     struct policydb *policydb;
@@ -1085,7 +1085,7 @@ static void context_struct_compute_av(struct policydb *policydb, struct context 
     type_attribute_bounds_av(policydb, scontext, tcontext, tclass, avd);
 }
 
-static void __nocfi security_compute_av_user_with_policy(struct selinux_policy *policy, u32 ssid, u32 tsid, u16 tclass,
+void __nocfi security_compute_av_user_with_policy(struct selinux_policy *policy, u32 ssid, u32 tsid, u16 tclass,
                                                          struct av_decision *avd)
 {
     struct policydb *policydb;

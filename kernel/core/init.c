@@ -5,6 +5,7 @@
 #include <linux/rcupdate.h>
 #include <linux/sched.h>
 #include <linux/workqueue.h>
+#include <linux/susfs.h>
 
 #include "policy/allowlist.h"
 #include "policy/app_profile.h"
@@ -12,7 +13,6 @@
 #include "klog.h" // IWYU pragma: keep
 #include "manager/manager_observer.h"
 #include "manager/throne_tracker.h"
-#include "hook/syscall_hook_manager.h"
 #include "hook/lsm_hook.h"
 #include "runtime/ksud.h"
 #include "runtime/ksud_boot.h"
@@ -20,9 +20,10 @@
 #include "ksu.h"
 #include "infra/file_wrapper.h"
 #include "selinux/selinux.h"
-#include "hook/syscall_hook.h"
 #include "feature/adb_root.h"
 #include "feature/selinux_hide.h"
+#include "feature/sucompat.h"
+#include "hook/setuid_hook.h"
 #include "infra/symbol_resolver.h"
 
 #if defined(__x86_64__)
@@ -123,7 +124,10 @@ int __init kernelsu_init(void)
 	}
 
 	ksu_init_symbol_resolver();
-	ksu_syscall_hook_init();
+
+#ifdef CONFIG_KSU_SUSFS
+	susfs_init();
+#endif /* CONFIG_KSU_SUSFS */
 
 	ksu_feature_init();
 
@@ -134,6 +138,10 @@ int __init kernelsu_init(void)
 	ksu_selinux_hide_init();
 
 	ksu_supercalls_init();
+
+	ksu_sucompat_init();
+
+	ksu_setuid_hook_init();
 
 	if (ksu_late_loaded) {
 		pr_info("late load mode, skipping kprobe hooks\n");
@@ -150,7 +158,6 @@ int __init kernelsu_init(void)
 		ksu_allowlist_init();
 		ksu_load_allow_list();
 
-		ksu_syscall_hook_manager_init();
 
 		ksu_throne_tracker_init();
 		ksu_observer_init();
@@ -165,7 +172,6 @@ int __init kernelsu_init(void)
 		}
 
 	} else {
-		ksu_syscall_hook_manager_init();
 
 		ksu_allowlist_init();
 
@@ -187,7 +193,6 @@ int __init kernelsu_init(void)
 void __exit kernelsu_exit(void)
 {
 	// Phase 1: Stop all hooks first to prevent new callbacks
-	ksu_syscall_hook_manager_exit();
 
 	ksu_supercalls_exit();
 
@@ -209,6 +214,10 @@ void __exit kernelsu_exit(void)
 	ksu_lsm_hook_exit();
 
 	ksu_adb_root_exit();
+
+	ksu_sucompat_exit();
+
+	ksu_setuid_hook_exit();
 
 	ksu_feature_exit();
 
